@@ -21,18 +21,21 @@ nextApp.prepare()
       const app = express()
 
       const allowAccess = (req, res, next) => {
-            if(req.isAuthenticated) {
+            if(req.isAuthenticated()) {
                   res.redirect("/home")
-                  next()
             }
+            next()
       }
 
       const restrictAccess = (req, res, next) => {
-            if(!req.isAuthenticated) {
+            if(!req.isAuthenticated()) {
                   res.redirect("/")
-                  next()
             }
+            next()
       }
+
+      app.use(require("./routes/authentication"))
+      // app.use(require("./routes/events"))
 
       app.use(/^\/$/, allowAccess)
       app.use("/home", restrictAccess)
@@ -41,6 +44,6 @@ nextApp.prepare()
             return handle(req, res)
       })
 
-      app.listen(PORT, () => console.log(`Server is running on por ${PORT}`))
+      app.listen(PORT, () => console.log(`Server is running on port ${PORT}`))
 })
 .catch(err => console.error(err))

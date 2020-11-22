@@ -1,9 +1,11 @@
 const express = require("express")
 const session = require("express-session")
 const passport = require("passport")
-const findOrCreate = require("mongoose-findorcreate")
+
+const GoogleStrategy = require("passport-google-oauth20").Strategy
+const FacebookStrategy = require("passport-facebook").Strategy
+
 const userModel = require("../models/userModel")
-const { serializeUser } = require("passport")
 
 const router = express.Router()
 
@@ -24,12 +26,12 @@ router.use(passport.session())
 
 // Local Authentication
 passport.use(userModel.createStrategy())
-passport.use(serializeUser((user, done) => done(null, user.id)))
-passport.use(deserializeUser((id, done) => {
+passport.serializeUser((user, done) => done(null, user.id))
+passport.deserializeUser((id, done) => {
       userModel.findById(id, (err, user) => {
             done(err, user)
       })
-}))
+})
 
 router.post("/login", (req, res) => {
       const user = new userModel({
@@ -38,18 +40,18 @@ router.post("/login", (req, res) => {
       })
 
       req.login(user, err => {
-            err ? (console.error(err), res.json("Login Failed")) :
+            err ? (console.error(err), res.json({message: "Login Failed"})) :
             passport.authenticate("local")(req, res, () => {
-                  res.json("Login Successful")
+                  res.json({message: "Login Successful"})
             })
       })
 })
 
 router.post("/register", (req, res) => {
       userModel.register({username: req.body.username}, req.body.password, (err, user) => {
-            err ? (console.error(err), res.json("Registration Failed")) :
+            err ? (console.error(err), res.json({message: "Registration Failed"})) :
             passport.authenticate("local")(req, res, () => {
-                  res.json("Registration Successful")
+                  res.json({message: "Registration Successful"})
             })
       })
 })
@@ -66,7 +68,7 @@ passport.use(new GoogleStrategy({
     callbackURL: "http://localhost:5000/auth/google/login"
   },
   function(accessToken, refreshToken, profile, cb) {
-    User.findOrCreate({ googleId: profile.id }, function (err, user) {
+    userModel.findOrCreate({ googleId: profile.id }, function (err, user) {
       return cb(err, user);
     });
   }
@@ -89,7 +91,7 @@ passport.use(new FacebookStrategy({
     callbackURL: "http://localhost:5000/auth/facebook/login"
   },
   function(accessToken, refreshToken, profile, cb) {
-    User.findOrCreate({ facebookId: profile.id }, function (err, user) {
+    userModel.findOrCreate({ facebookId: profile.id }, function (err, user) {
       return cb(err, user);
     });
   }
@@ -102,3 +104,5 @@ router.get("/auth/facebook/login",
         successRedirect: "/home"
       }),
 )
+
+module.exports = router
